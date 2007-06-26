@@ -8,7 +8,7 @@
 %endif
 
 # Redefine %jar so we don't need a jdk to build
-%define jar %{_bindir}/gjar%{gcc_suffix}
+%define jar %{_bindir}/gjar%{gccsuffix}
 
 Summary:                Eclipse Compiler for Java
 Name:                   ecj-bootstrap
@@ -121,8 +121,9 @@ export CLASSPATH=`pwd`/jdtcoresrc/ecj.jar:$ORIGCLASSPATH
   popd
 %else
   pushd %{buildroot}%{_javadir}
+# (anssi) added -findirect-dispatch to prevent build failure:
   %{_bindir}/gcj%{gccsuffix} -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
-    -Wl,-R,%{_javadir} \
+    -Wl,-R,%{_javadir} -findirect-dispatch \
     eclipse-ecj.jar -o %{buildroot}%{_bindir}/ecj
   popd
 %endif
