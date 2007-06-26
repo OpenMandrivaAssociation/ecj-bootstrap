@@ -12,7 +12,7 @@
 Summary:                Eclipse Compiler for Java
 Name:                   ecj-bootstrap
 Version:                3.2.2
-Release:                %mkrel 1.3
+Release:                %mkrel 1.4
 Epoch:                  0
 URL:                    http://www.eclipse.org/
 Source0:                ftp://ftp.cse.buffalo.edu/pub/Eclipse/eclipse/downloads/drops/R-3.2.2-200702121330/ecjsrc.zip
@@ -67,7 +67,8 @@ pushd ecj-bootstrap-tmp
 for f in `%{_bindir}/find . -type f -name '*.java' | /bin/cut -c 3-`; do
   %{_bindir}/gcj%{gccsuffix} -Wno-deprecated -I. -C $f
 done
-%{_bindir}/find -name '*.class' -or -name '*.properties' -or -name '*.rsc' | %{_bindir}/xargs -t %{jar} cf ../ecj-bootstrap.jar
+# (anssi) asterisk added to workaround apparent gjar bug (GCC #32516)
+%{_bindir}/find * -name '*.class' -or -name '*.properties' -or -name '*.rsc' | %{_bindir}/xargs -t %{jar} cf ../ecj-bootstrap.jar
 popd
 
 # Delete our modified ecj and restore the backup
