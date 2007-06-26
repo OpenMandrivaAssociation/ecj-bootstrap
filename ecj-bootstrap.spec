@@ -2,7 +2,6 @@
 %define ecj_bin         1
 %define gcj_support     1
 %define gccsuffix       4.3
-%define gccver          4.3
 %if %{bootstrap}
 %define gcj_support     0
 %endif
@@ -13,7 +12,7 @@
 Summary:                Eclipse Compiler for Java
 Name:                   ecj-bootstrap
 Version:                3.2.2
-Release:                %mkrel 1.2
+Release:                %mkrel 1.3
 Epoch:                  0
 URL:                    http://www.eclipse.org/
 Source0:                ftp://ftp.cse.buffalo.edu/pub/Eclipse/eclipse/downloads/drops/R-3.2.2-200702121330/ecjsrc.zip
@@ -22,11 +21,10 @@ Source2:                compilejdtcore.xml
 License:                CPL
 Group:                  Development/Java
 BuildRoot:              %{_tmppath}/%{name}-%{version}-root
-Requires:               gcc%{gccsuffix}-java >= 0:%{gccver}
 %if !%{bootstrap}
 BuildRequires:          ant
 %endif
-BuildRequires:          gcc%{gccsuffix}-java = 0:%{gccver}
+BuildRequires:          gcc%{gccsuffix}-java
 BuildRequires:          jpackage-utils
 BuildRequires:          zip
 # (anssi) bootstrap compiler should not be proposed:
