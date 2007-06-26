@@ -1,18 +1,19 @@
-%define bootstrap       0
+%define bootstrap       1
 %define ecj_bin         1
 %define gcj_support     1
-%define gccver          4.1.2
+%define gccsuffix       4.3
+%define gccver          4.3
 %if %{bootstrap}
 %define gcj_support     0
 %endif
 
 # Redefine %jar so we don't need a jdk to build
-%define jar %{_bindir}/fastjar
+%define jar %{_bindir}/gjar%{gcc_suffix}
 
 Summary:                Eclipse Compiler for Java
 Name:                   ecj-bootstrap
 Version:                3.2.2
-Release:                %mkrel 1.1
+Release:                %mkrel 1.2
 Epoch:                  0
 URL:                    http://www.eclipse.org/
 Source0:                ftp://ftp.cse.buffalo.edu/pub/Eclipse/eclipse/downloads/drops/R-3.2.2-200702121330/ecjsrc.zip
@@ -21,14 +22,16 @@ Source2:                compilejdtcore.xml
 License:                CPL
 Group:                  Development/Java
 BuildRoot:              %{_tmppath}/%{name}-%{version}-root
-Requires:               gcc-java >= 0:%{gccver}
+Requires:               gcc%{gccsuffix}-java >= 0:%{gccver}
 %if !%{bootstrap}
 BuildRequires:          ant
 %endif
-BuildRequires:          gcc-java = 0:%{gccver}
+BuildRequires:          gcc%{gccsuffix}-java = 0:%{gccver}
 BuildRequires:          jpackage-utils
 BuildRequires:          zip
-Provides:               eclipse-ecj
+# (anssi) bootstrap compiler should not be proposed:
+#Provides:               eclipse-ecj
+Conflicts:		eclipse-ecj
 %if !%{ecj_bin}
 %if !%{gcj_support}
 BuildArch:              noarch
@@ -64,7 +67,7 @@ export CLASSPATH=
 
 pushd ecj-bootstrap-tmp
 for f in `%{_bindir}/find . -type f -name '*.java' | /bin/cut -c 3-`; do
-  %{_bindir}/gcj -Wno-deprecated -I. -C $f
+  %{_bindir}/gcj%{gccsuffix} -Wno-deprecated -I. -C $f
 done
 %{_bindir}/find -name '*.class' -or -name '*.properties' -or -name '*.rsc' | %{_bindir}/xargs -t %{jar} cf ../ecj-bootstrap.jar
 popd
@@ -111,14 +114,14 @@ export CLASSPATH=`pwd`/jdtcoresrc/ecj.jar:$ORIGCLASSPATH
 %{__mkdir_p} %{buildroot}%{_bindir}
 %if %{gcj_support}
   pushd %{buildroot}%{_libdir}/gcj/%{name}
-  %{_bindir}/gcj -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
+  %{_bindir}/gcj%{gccsuffix} -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
     -Wl,-R,%{_libdir}/gcj/%{name} \
     eclipse-ecj.jar.so -o \
     %{buildroot}%{_bindir}/ecj
   popd
 %else
   pushd %{buildroot}%{_javadir}
-  %{_bindir}/gcj -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
+  %{_bindir}/gcj%{gccsuffix} -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
     -Wl,-R,%{_javadir} \
     eclipse-ecj.jar -o %{buildroot}%{_bindir}/ecj
   popd
@@ -141,5 +144,3 @@ export CLASSPATH=`pwd`/jdtcoresrc/ecj.jar:$ORIGCLASSPATH
 %dir %{_libdir}/gcj/%{name}
 %attr(-,root,root) %{_libdir}/gcj/%{name}/*
 %endif
-
-
