@@ -12,7 +12,7 @@
 Summary:                Eclipse Compiler for Java
 Name:                   ecj-bootstrap
 Version:                3.2.2
-Release:                %mkrel 1.4
+Release:                %mkrel 1.5
 Epoch:                  0
 URL:                    http://www.eclipse.org/
 Source0:                ftp://ftp.cse.buffalo.edu/pub/Eclipse/eclipse/downloads/drops/R-3.2.2-200702121330/ecjsrc.zip
@@ -25,7 +25,7 @@ BuildRoot:              %{_tmppath}/%{name}-%{version}-root
 BuildRequires:          ant
 %endif
 BuildRequires:          gcc%{gccsuffix}-java
-BuildRequires:          jpackage-utils
+BuildRequires:          java-rpmbuild
 BuildRequires:          zip
 # (anssi) bootstrap compiler should not be proposed:
 #Provides:               eclipse-ecj
