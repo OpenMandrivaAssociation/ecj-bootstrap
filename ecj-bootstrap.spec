@@ -20,7 +20,6 @@ Source1:                compilejdtcorewithjavac.xml
 Source2:                compilejdtcore.xml
 License:                CPL
 Group:                  Development/Java
-BuildRoot:              %{_tmppath}/%{name}-%{version}-root
 %if !%{bootstrap}
 BuildRequires:          ant
 %endif
