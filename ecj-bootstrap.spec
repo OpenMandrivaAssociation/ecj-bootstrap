@@ -1,7 +1,7 @@
 %define bootstrap       1
 %define ecj_bin         1
 %define gcj_support     1
-%define gccsuffix       4.3
+%define gccsuffix       4.4
 %if %{bootstrap}
 %define gcj_support     0
 %endif
