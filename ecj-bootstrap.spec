@@ -1,146 +1,89 @@
-%define bootstrap       1
-%define ecj_bin         1
-%define gcj_support     1
-%define gccsuffix       4.4
-%if %{bootstrap}
-%define gcj_support     0
-%endif
+Summary:	Eclipse Compiler for Java
+Name:		ecj-bootstrap
+Version:	3.4.2
+Release:	1
+URL:		http://www.eclipse.org
+License:	EPL
+Group:		Development/Java
+Source0:	http://download.eclipse.org/eclipse/downloads/drops/R-%{version}-%{qualifier}/ecjsrc-%{version}.zip
+Source1:	ecj.sh.in
+# Use ECJ for GCJ
+# cvs -d:pserver:anonymous@sourceware.org:/cvs/rhug \
+# export -r eclipse_r34_1 eclipse-gcj
+# tar cjf ecj-gcj.tar.bz2 eclipse-gcj
+Source2:	ecj-gcj.tar.bz2
+Source3:	http://repo2.maven.org/maven2/org/eclipse/jdt/core/3.3.0-v_771/core-3.3.0-v_771.pom
+BuildArch:      noarch
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
-# Redefine %jar so we don't need a jdk to build
-%define jar %{_bindir}/gjar%{gccsuffix}
+BuildRequires:	gcc-java >= 4.0.0
+BuildRequires:	fastjar
+BuildRequires:	java-1.5.0-gcj-devel
+BuildRequires:	java-gcj-compat
+Requires:	libgcj >= 4.0.0
+Requires(post):	java-gcj-compat
+Requires(postun): java-gcj-compat
+Provides:	eclipse-ecj = 1:%{version}-%{release}
 
-Summary:                Eclipse Compiler for Java
-Name:                   ecj-bootstrap
-Version:                3.2.2
-Release:                %mkrel 1.6
-Epoch:                  0
-URL:                    http://www.eclipse.org/
-Source0:                ftp://ftp.cse.buffalo.edu/pub/Eclipse/eclipse/downloads/drops/R-3.2.2-200702121330/ecjsrc.zip
-Source1:                compilejdtcorewithjavac.xml
-Source2:                compilejdtcore.xml
-License:                CPL
-Group:                  Development/Java
-BuildRoot:              %{_tmppath}/%{name}-%{version}-root
-%if !%{bootstrap}
-BuildRequires:          ant
-%endif
-BuildRequires:          gcc%{gccsuffix}-java
-BuildRequires:          java-rpmbuild
-BuildRequires:          zip
-# (anssi) bootstrap compiler should not be proposed:
-#Provides:               eclipse-ecj
-Conflicts:		eclipse-ecj
-%if !%{ecj_bin}
-%if !%{gcj_support}
-BuildArch:              noarch
-%endif
-%endif
+# Always generate debug info when building RPMs (Andrew Haley)
+Patch0:		ecj-rpmdebuginfo.patch
+Patch1:		ecj-defaultto1.5.patch
+Patch2:		ecj-generatedebuginfo.patch
 
 %description
-Ecj is the Java bytecode compiler of the Eclipse Project.
+ECJ is the Java bytecode compiler of the Eclipse Platform.  It is also known as
+the JDT Core batch compiler.
 
 %prep
-%setup -q -c -T
-%{__install} -D -m 644 %{SOURCE0} jdtcoresrc/src/ecj.zip
-%if !%{bootstrap}
-%{__install} -D -m 644 %{SOURCE1} jdtcoresrc/compilejdtcorewithjavac.xml
-%{__install} -D -m 644 %{SOURCE2} jdtcoresrc/compilejdtcore.xml
-%{__perl} -pi -e 's/verbose="true"/verbose="\${javacVerbose}"/' jdtcoresrc/compilejdtcorewithjavac.xml jdtcoresrc/compilejdtcore.xml
-%endif
+%setup -q -c
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+
+cp %{SOURCE3} pom.xml
+# Use ECJ for GCJ's bytecode compiler
+tar jxf %{SOURCE2}
+mv eclipse-gcj/org/eclipse/jdt/internal/compiler/batch/GCCMain.java \
+  org/eclipse/jdt/internal/compiler/batch/
+cat eclipse-gcj/gcc.properties >> \
+  org/eclipse/jdt/internal/compiler/batch/messages.properties
+rm -rf eclipse-gcj
+
+# Remove bits of JDT Core we don't want to build
+rm -r org/eclipse/jdt/internal/compiler/tool
+rm -r org/eclipse/jdt/internal/compiler/apt
+
+# JDTCompilerAdapter isn't used by the batch compiler
+rm -f org/eclipse/jdt/core/JDTCompilerAdapter.java
 
 %build
-# Bootstrapping is 3 parts:
-# 1. Build ecj with gcj -C
-# 2. Build ecj with gcj-built ecj ("javac") using ant
-# 3. Re-build ecj with output of 2 using ant
-
-## 1. Build ecj with gcj -C
-# Unzip the "stable compiler" source into a temp dir and build it.
-# Note: we don't want to build the CompilerAdapter.
-%{__mkdir_p} ecj-bootstrap-tmp
-%{__unzip} -qq -d ecj-bootstrap-tmp jdtcoresrc/src/ecj.zip
-%{__rm} ecj-bootstrap-tmp/org/eclipse/jdt/core/JDTCompilerAdapter.java
-
-export CLASSPATH=
-
-pushd ecj-bootstrap-tmp
-for f in `%{_bindir}/find . -type f -name '*.java' | /bin/cut -c 3-`; do
-  %{_bindir}/gcj%{gccsuffix} -Wno-deprecated -I. -C $f
+for f in `find -name '*.java' | cut -c 3- | LC_ALL=C sort`; do
+    gcj -Wno-deprecated -C $f
 done
-# (anssi) asterisk added to workaround apparent gjar bug (GCC #32516)
-%{_bindir}/find * -name '*.class' -or -name '*.properties' -or -name '*.rsc' | %{_bindir}/xargs -t %{jar} cf ../ecj-bootstrap.jar
-popd
-
-# Delete our modified ecj and restore the backup
-%{__rm} -r ecj-bootstrap-tmp
-
-%if !%{bootstrap}
-%if %{gcj_support}
-## 2. Build ecj
-CLASSPATH=$ORIGCLASSPATH
-export CLASSPATH=ecj-bootstrap.jar:$ORIGCLASSPATH
-export OPT_JAR_LIST=:
-%{ant} -buildfile jdtcoresrc/compilejdtcorewithjavac.xml \
-       -DjavacFailOnError=true \
-       -DjavacVerbose=false
-
-%{__rm} ecj-bootstrap.jar
-
-## 3. Use this ecj to rebuild itself
-export CLASSPATH=`pwd`/jdtcoresrc/ecj.jar:$ORIGCLASSPATH
-%{ant} -buildfile jdtcoresrc/compilejdtcore.xml \
-       -DjavacFailOnError=true \
-       -DjavacVerbose=false
-
-%endif # gcj_support
-%else
-%{__mv} ecj-bootstrap.jar ecj.jar
-%endif # !bootstrap
+find -name '*.class' -or -name '*.properties' -or -name '*.rsc' |	\
+    xargs fastjar cf ecj-%{version}.jar
 
 %install
-%{__rm} -rf %{buildroot}
-
-%{__install} -D -m 644 ecj.jar %{buildroot}%{_javadir}/eclipse-ecj.jar
-(cd %{buildroot}%{_javadir} && %{__ln_s} eclipse-ecj.jar jdtcore.jar)
-(cd %{buildroot}%{_javadir} && %{__ln_s} eclipse-ecj.jar ecj.jar)
-
-%if %{gcj_support}
-%{_bindir}/aot-compile-rpm
-%endif
-
-%if %{ecj_bin}
-# Build and install ecj binary
-%{__mkdir_p} %{buildroot}%{_bindir}
-%if %{gcj_support}
-  pushd %{buildroot}%{_libdir}/gcj/%{name}
-  %{_bindir}/gcj%{gccsuffix} -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
-    -Wl,-R,%{_libdir}/gcj/%{name} \
-    eclipse-ecj.jar.so -o \
-    %{buildroot}%{_bindir}/ecj
-  popd
-%else
-  pushd %{buildroot}%{_javadir}
-# (anssi) added -findirect-dispatch to prevent build failure:
-  %{_bindir}/gcj%{gccsuffix} -g -O2 --main=org.eclipse.jdt.internal.compiler.batch.Main \
-    -Wl,-R,%{_javadir} -findirect-dispatch \
-    eclipse-ecj.jar -o %{buildroot}%{_bindir}/ecj
-  popd
-%endif
-%{__chmod} a+x %{buildroot}%{_bindir}/ecj
-%endif
+rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_javadir}
+cp -a *.jar %{buildroot}%{_javadir}/ecj-%{version}.jar
+pushd %{buildroot}%{_javadir}
+ln -s ecj-%{version}.jar ecj.jar
+ln -s ecj-%{version}.jar eclipse-ecj-%{version}.jar
+ln -s eclipse-ecj-%{version}.jar eclipse-ecj.jar
+ln -s ecj-%{version}.jar jdtcore.jar
+popd
+# Install the ecj wrapper script
+install -p -D -m0755 %{SOURCE1} $RPM_BUILD_ROOT%{_bindir}/ecj
+sed --in-place "s:@JAVADIR@:%{_javadir}:" $RPM_BUILD_ROOT%{_bindir}/ecj
 
 %clean
-%{__rm} -rf %{buildroot}
+rm -rf %{buildroot}
 
 %files
-%defattr(0644,root,root,0755)
-%if %{ecj_bin}
-%attr(0755,root,root) %{_bindir}/ecj
-%endif
-%{_javadir}/ecj.jar
-%{_javadir}/eclipse-ecj.jar
+%defattr(-,root,root,-)
+%doc about.html
+%{_bindir}/ecj
+%{_javadir}/ecj*.jar
+%{_javadir}/eclipse-ecj*.jar
 %{_javadir}/jdtcore.jar
-%if %{gcj_support}
-%dir %{_libdir}/gcj/%{name}
-%attr(-,root,root) %{_libdir}/gcj/%{name}/*
-%endif
