@@ -2,7 +2,7 @@ Summary:	Eclipse Compiler for Java
 Name:		ecj-bootstrap
 Version:	3.4.2
 Release:	1
-URL:		http://www.eclipse.org
+URL:		https://www.eclipse.org
 License:	EPL
 Group:		Development/Java
 Source0:	http://download.eclipse.org/eclipse/downloads/drops/R-%{version}-%{qualifier}/ecjsrc-%{version}.zip
